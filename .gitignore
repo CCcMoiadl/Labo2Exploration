@@ -1,0 +1,18 @@
+# Node dependencies
+node_modules/
+
+# Frontend builds
+frontend/dist/
+frontend/.vite/
+
+# Local env files
+.env
+.env.local
+.env.*.local
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

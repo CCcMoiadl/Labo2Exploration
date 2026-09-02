@@ -1,4 +1,4 @@
-# Application de Conversion d'Unités de Mesure 🔄
+# Application de Conversion d'Unités de Mesure (https://github.com/CCcMoiadl/Labo2Exploration/edit/main/README.md) 🔄
 
 Cette application complète de conversion d'unités de mesure propose une interface utilisateur interactive et réactive construite en **React** avec **Material UI** (MUI), connectée à un serveur **Node.js / Express** pour effectuer tous les calculs de conversion en temps réel.
 

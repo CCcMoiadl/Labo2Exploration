@@ -12,7 +12,10 @@ export default function Hero() {
           Convertissez longueurs, volumes, masses et températures avec précision, en un clin d’œil.
         </Typography>
       </Box>
-      <Box className="hero-art" aria-hidden="true"><Box className="hero-glow" /><Box component="img" src={heroImage} alt="" /></Box>
+      <Box className="hero-art" aria-hidden="true">
+        <Box className="hero-glow" />
+        <Box className="hero-illustration" sx={{ '--hero-image': `url(${heroImage})` }} />
+      </Box>
     </Box>
   );
 }

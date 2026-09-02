@@ -9,7 +9,9 @@ import { createAppTheme } from './theme';
 import './App.css';
 
 const API_BASE_URL = 'http://localhost:5000/api';
+const DEFAULT_ACCENT_COLOR = '#6d4aff';
 const defaultUnits = { length: ['ft', 'm'], volume: ['l', 'gal'], weight: ['kg', 'lb'], temperature: ['C', 'F'] };
+const isHexColor = (color) => /^#[0-9a-f]{6}$/i.test(color);
 
 export default function App() {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
@@ -17,7 +19,11 @@ export default function App() {
     const saved = localStorage.getItem('darkMode');
     return saved === null ? prefersDarkMode : saved === 'true';
   });
-  const theme = useMemo(() => createAppTheme(darkMode ? 'dark' : 'light'), [darkMode]);
+  const [accentColor, setAccentColor] = useState(() => {
+    const saved = localStorage.getItem('accentColor');
+    return isHexColor(saved) ? saved : DEFAULT_ACCENT_COLOR;
+  });
+  const theme = useMemo(() => createAppTheme(darkMode ? 'dark' : 'light', accentColor), [darkMode, accentColor]);
   const [categories, setCategories] = useState({});
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
@@ -105,6 +111,12 @@ export default function App() {
   const handleThemeToggle = () => setDarkMode((current) => {
     localStorage.setItem('darkMode', String(!current)); return !current;
   });
+  const handleAccentChange = (color) => {
+    if (!isHexColor(color)) return;
+    setAccentColor(color);
+    localStorage.setItem('accentColor', color);
+  };
+  const handleAccentReset = () => handleAccentChange(DEFAULT_ACCENT_COLOR);
   const handleCategoryChange = (_event, nextCategory) => {
     if (!nextCategory || !categories[nextCategory]) return;
     setCategory(nextCategory); setResult(null); setFormula(''); setValidationError('');
@@ -123,8 +135,8 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box className="app-shell">
-        <AppHeader darkMode={darkMode} onThemeToggle={handleThemeToggle} />
+      <Box className="app-shell" style={{ '--theme-color': accentColor }}>
+        <AppHeader darkMode={darkMode} accentColor={accentColor} onThemeToggle={handleThemeToggle} onAccentChange={handleAccentChange} onAccentReset={handleAccentReset} />
         <Container component="main" maxWidth="lg">
           <Hero />
           {loading ? <Box className="loading-state"><CircularProgress /><Typography color="text.secondary">Préparation du convertisseur…</Typography></Box>

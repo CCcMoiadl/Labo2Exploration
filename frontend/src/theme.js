@@ -1,13 +1,16 @@
-import { alpha, createTheme } from '@mui/material/styles';
+import { alpha, createTheme, darken, lighten } from '@mui/material/styles';
 
-export const createAppTheme = (mode) => {
+export const createAppTheme = (mode, accentColor = '#6d4aff') => {
   const dark = mode === 'dark';
   return createTheme({
     palette: {
       mode,
-      primary: { main: dark ? '#a78bfa' : '#6d4aff' },
-      secondary: { main: '#c44cff' },
-      background: { default: dark ? '#090812' : '#f7f5ff', paper: dark ? '#151321' : '#ffffff' },
+      primary: { main: accentColor },
+      secondary: { main: accentColor },
+      background: {
+        default: dark ? darken(accentColor, 0.88) : lighten(accentColor, 0.93),
+        paper: dark ? darken(accentColor, 0.78) : lighten(accentColor, 0.975),
+      },
       text: { primary: dark ? '#f7f5ff' : '#19152b', secondary: dark ? '#aaa4c1' : '#6c6680' },
     },
     shape: { borderRadius: 18 },
@@ -19,14 +22,25 @@ export const createAppTheme = (mode) => {
       button: { fontWeight: 700 },
     },
     components: {
-      MuiCssBaseline: { styleOverrides: { body: { minWidth: 320 }, '::selection': { background: alpha('#8b5cf6', 0.3) } } },
-      MuiPaper: { styleOverrides: { root: { backgroundImage: 'none', border: `1px solid ${dark ? alpha('#c4b5fd', 0.12) : alpha('#5b3fd6', 0.1)}` } } },
+      MuiCssBaseline: { styleOverrides: { body: { minWidth: 320 }, '::selection': { background: alpha(accentColor, 0.3) } } },
+      MuiPaper: { styleOverrides: { root: {
+        backgroundImage: `linear-gradient(145deg, ${alpha(accentColor, dark ? 0.1 : 0.055)}, transparent 58%)`,
+        border: `1px solid ${alpha(accentColor, dark ? 0.3 : 0.18)}`,
+      } } },
       MuiButton: { styleOverrides: { root: { borderRadius: 12, textTransform: 'none' } } },
       MuiIconButton: { styleOverrides: { root: { borderRadius: 12 } } },
       MuiOutlinedInput: { styleOverrides: { root: {
         borderRadius: 14, transition: 'box-shadow 180ms ease, background-color 180ms ease',
-        background: dark ? alpha('#ffffff', 0.035) : alpha('#ffffff', 0.75),
-        '&.Mui-focused': { boxShadow: `0 0 0 4px ${alpha('#8b5cf6', 0.14)}` },
+        background: dark ? alpha(accentColor, 0.1) : alpha(accentColor, 0.045),
+        '&.Mui-focused': { boxShadow: `0 0 0 4px ${alpha(accentColor, 0.14)}` },
+      } } },
+      MuiTab: { styleOverrides: { root: {
+        borderRadius: '12px 12px 0 0',
+        '&.Mui-selected': { background: alpha(accentColor, dark ? 0.16 : 0.09) },
+      } } },
+      MuiChip: { styleOverrides: { root: {
+        background: alpha(accentColor, dark ? 0.2 : 0.1),
+        border: `1px solid ${alpha(accentColor, 0.2)}`,
       } } },
       MuiTooltip: { defaultProps: { arrow: true } },
     },

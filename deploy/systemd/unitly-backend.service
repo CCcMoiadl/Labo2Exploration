@@ -11,7 +11,7 @@ User=<DEPLOY_USER>
 WorkingDirectory=<APP_DIR>/backend
 Environment=NODE_ENV=production
 Environment=PORT=<BACKEND_PORT>
-ExecStart=/usr/bin/node server.js
+ExecStart=/usr/local/bin/node server.js
 Restart=on-failure
 RestartSec=5s
 NoNewPrivileges=true

@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   frontend:
-    name: Frontend - lint et build
+    name: Frontend - tests, lint et build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -33,11 +33,13 @@ jobs:
         run: npm ci
       - name: Vérifier le code
         run: npm run lint
+      - name: Tester le frontend
+        run: npm test
       - name: Compiler le frontend
         run: npm run build
 
   backend:
-    name: Backend - vérification de syntaxe
+    name: Backend - syntaxe et tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -56,3 +58,5 @@ jobs:
         run: npm ci
       - name: Vérifier la syntaxe du serveur
         run: node --check server.js
+      - name: Tester le backend
+        run: npm test

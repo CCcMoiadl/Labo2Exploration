@@ -54,7 +54,7 @@ export default function BackgroundLights() {
         const y = layer.clientHeight * Math.random();
         const dx = (Math.random() - 0.5) * Math.min(layer.clientWidth * 0.2, 140);
         const dy = (Math.random() - 0.5) * 100;
-        const size = 0.4 + Math.random() * 1.2;
+        const size = 0.65 + Math.random() * 1.45;
         const brightness = 0.35 + Math.random() * 0.45;
         const animation = spark.animate([
           { transform: transform(x, y, 0.08), opacity: 0, offset: 0 },

@@ -1,16 +1,20 @@
-export function validateConversion(value, category, from, to, categories) {
-  if (typeof value !== 'string' || value.trim() === '') return 'Veuillez saisir une valeur à convertir.';
+import { messages } from './i18n.js';
+
+export function validateConversion(value, category, from, to, categories, language = 'fr') {
+  const t = messages[language];
+  if (typeof value !== 'string' || value.trim() === '') return t.invalidValue;
   const number = Number(value);
-  if (!Number.isFinite(number)) return 'Veuillez saisir un nombre fini valide.';
-  if (!Object.hasOwn(categories, category)) return 'Veuillez choisir une catégorie valide.';
+  if (!Number.isFinite(number)) return t.finite;
+  if (!Object.hasOwn(categories, category)) return t.invalidCategory;
   const units = categories[category].units;
-  if (!units.some((unit) => unit.id === from) || !units.some((unit) => unit.id === to)) return 'Veuillez choisir des unités valides.';
-  if (category !== 'temperature' && number < 0) return 'Les valeurs négatives ne sont pas autorisées pour cette catégorie.';
-  if (category === 'temperature' && number < { C: -273.15, F: -459.67, K: 0 }[from]) return 'La température ne peut pas être inférieure au zéro absolu.';
+  if (!units.some((unit) => unit.id === from) || !units.some((unit) => unit.id === to)) return t.invalidUnits;
+  if (category !== 'temperature' && number < 0) return t.negative;
+  if (category === 'temperature' && number < { C: -273.15, F: -459.67, K: 0 }[from]) return t.absoluteZero;
   return '';
 }
 
-export async function requestConversion(payload, signal) {
+export async function requestConversion(payload, signal, language = 'fr') {
+  const t = messages[language];
   let response;
   try {
     response = await fetch('/api/convert', {
@@ -19,12 +23,22 @@ export async function requestConversion(payload, signal) {
     });
   } catch (error) {
     if (error.name === 'AbortError') throw error;
-    throw new Error('Impossible de joindre le serveur. Veuillez réessayer.');
+    throw new Error(t.connection);
   }
   let data;
   try { data = await response.json(); }
-  catch { throw new Error('Le serveur a envoyé une réponse invalide. Veuillez réessayer.'); }
-  if (!response.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'La conversion a échoué. Veuillez réessayer.');
-  if (!Number.isFinite(data?.convertedValue) || typeof data?.formula !== 'string') throw new Error('Le serveur a envoyé une réponse invalide. Veuillez réessayer.');
+  catch { throw new Error(t.invalidResponse); }
+  if (!response.ok) {
+    const serverError = typeof data?.error === 'string' ? data.error : '';
+    if (language === 'fr') throw new Error(serverError || t.conversionFailed);
+    const translatedError = [
+      ['Catégorie invalide', t.invalidApiCategory], ['Unités de départ', t.invalidApiUnits],
+      ['nombre valide', t.invalidNumber], ['ne peut pas être négative', t.apiNegative],
+      ['zéro absolu', t.absoluteZero], ['trop grande', t.tooLarge],
+      ['objet JSON', t.invalidObject], ['format JSON', t.invalidRequest],
+    ].find(([phrase]) => serverError.includes(phrase))?.[1];
+    throw new Error(translatedError || t.conversionFailed);
+  }
+  if (!Number.isFinite(data?.convertedValue) || typeof data?.formula !== 'string') throw new Error(t.invalidResponse);
   return data;
 }

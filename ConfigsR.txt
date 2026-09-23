@@ -1,0 +1,33 @@
+﻿CONFIGURATIONS IMPORTANTES — UNITLY
+
+Prérequis
+- Node.js 24 et npm.
+- Deux applications indépendantes : frontend React/Vite et backend Node.js/Express.
+
+Installation locale (depuis la racine du dépôt)
+1. Backend : cd backend ; npm ci
+2. Frontend : cd frontend ; npm ci
+
+Démarrage en développement
+- Terminal 1 : cd backend ; npm run dev
+  API disponible sur http://localhost:3000 (PORT=3000 par défaut).
+- Terminal 2 : cd frontend ; npm run dev
+  Site disponible sur http://localhost:5173. Vite transmet /api au backend sur le port 3000.
+- Si le port du backend change, adapter frontend/vite.config.js.
+
+Vérification et build
+- Backend : cd backend ; npm run check ; npm test
+- Frontend : cd frontend ; npm run lint ; npm test ; npm run build
+- Le build frontend est généré dans frontend/dist.
+
+Configuration de production
+- Variables backend : PORT (3000 par défaut), NODE_ENV=production. Aucun fichier .env n’est requis ou chargé automatiquement.
+- Servir frontend/dist comme fichiers statiques avec NGINX.
+- Configurer NGINX pour transmettre /api/ et /health au backend, par exemple http://127.0.0.1:3000, en gardant le chemin complet.
+- Langue choisie (fr/en) et préférences d’apparence sont conservées dans le stockage local du navigateur.
+
+Déploiement automatisé (facultatif)
+- La VM doit avoir Node.js 24, npm, Bash, rsync et flock; le service systemd et NGINX doivent être configurés.
+- Variables GitHub : APP_DIR (obligatoire), BACKEND_PORT (défaut 3000), WEB_ROOT (défaut /var/www/unitly).
+- Secrets GitHub : DEPLOY_HOST, DEPLOY_USER, SSH_PRIVATE_KEY, SSH_PORT, SSH_KNOWN_HOSTS.
+- Ne pas ajouter de secrets ni de fichiers .env au dépôt.

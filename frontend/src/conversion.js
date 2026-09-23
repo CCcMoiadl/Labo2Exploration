@@ -1,4 +1,4 @@
-import { messages } from './i18n';
+import { messages } from './i18n.js';
 
 export function validateConversion(value, category, from, to, categories, language = 'fr') {
   const t = messages[language];
@@ -28,7 +28,17 @@ export async function requestConversion(payload, signal, language = 'fr') {
   let data;
   try { data = await response.json(); }
   catch { throw new Error(t.invalidResponse); }
-  if (!response.ok) throw new Error(t.conversionFailed);
+  if (!response.ok) {
+    const serverError = typeof data?.error === 'string' ? data.error : '';
+    if (language === 'fr') throw new Error(serverError || t.conversionFailed);
+    const translatedError = [
+      ['Catégorie invalide', t.invalidApiCategory], ['Unités de départ', t.invalidApiUnits],
+      ['nombre valide', t.invalidNumber], ['ne peut pas être négative', t.apiNegative],
+      ['zéro absolu', t.absoluteZero], ['trop grande', t.tooLarge],
+      ['objet JSON', t.invalidObject], ['format JSON', t.invalidRequest],
+    ].find(([phrase]) => serverError.includes(phrase))?.[1];
+    throw new Error(translatedError || t.conversionFailed);
+  }
   if (!Number.isFinite(data?.convertedValue) || typeof data?.formula !== 'string') throw new Error(t.invalidResponse);
   return data;
 }

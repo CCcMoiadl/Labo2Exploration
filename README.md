@@ -61,12 +61,15 @@ npm run dev   # Démarre l'application sur http://localhost:5173
 
 ## Intégration continue (CI)
 
+L'audit des dix exigences du laboratoire, les preuves disponibles et les
+vérifications restant à effectuer sont dans [deploy/CONFORMITE.md](deploy/CONFORMITE.md).
+
 Le workflow [GitHub Actions](.github/workflows/ci.yml) s'exécute à chaque push et pull request. Il peut aussi être lancé manuellement depuis l'onglet **Actions** du dépôt, en sélectionnant **CI**, puis **Run workflow**.
 
 Deux jobs indépendants utilisent Node.js 24 et un cache npm :
 
-* **Frontend** : installation reproductible avec `npm ci`, analyse du code avec `npm run lint`, puis compilation avec `npm run build`.
-* **Backend** : installation avec `npm ci`, puis vérification de syntaxe avec `node --check server.js`.
+* **Frontend** : installation reproductible avec `npm ci`, tests avec `npm test`, analyse du code avec `npm run lint`, puis compilation avec `npm run build`.
+* **Backend** : installation avec `npm ci`, vérification de syntaxe avec `node --check server.js`, puis tests avec `npm test`.
 
 Pour reproduire les vérifications localement, exécutez ces commandes dans les dossiers respectifs. Aucun secret n'est nécessaire pour les tests locaux. Le workflow `ci.yml` reste consacré aux vérifications ; le workflow `deploy.yml` décrit ci-dessous exécute également les vrais tests avant le déploiement.
 
@@ -179,7 +182,7 @@ Remplacer tous les paramètres dans cette copie :
 | `<APP_DIR>` | Chemin absolu de la racine du dépôt, par exemple `/opt/unitly` ; le modèle ajoute `/backend` |
 | `<BACKEND_PORT>` | Port libre entre 1024 et 65535, par exemple `3000`, identique à la cible du proxy NGINX |
 
-L'utilisateur doit pouvoir traverser le chemin et lire `backend/server.js` et `backend/node_modules`. Le modèle utilise `/usr/bin/node` : vérifier `command -v node` et `node --version` sur la VM (Node.js 24), puis adapter `ExecStart` au chemin absolu réel si nécessaire. Systemd ne charge pas le profil shell ni automatiquement une installation Node.js gérée par nvm. Aucun secret n'est nécessaire dans cette unité.
+L'utilisateur doit pouvoir traverser le chemin et lire `backend/server.js` et `backend/node_modules`. Le modèle utilise `/usr/local/bin/node`, chemin indiqué dans la documentation Azure : vérifier `command -v node` et `node --version` sur la VM (Node.js 24), puis adapter `ExecStart` au chemin absolu réel si nécessaire. Systemd ne charge pas le profil shell ni automatiquement une installation Node.js gérée par nvm. Aucun secret n'est nécessaire dans cette unité. Le backend écoute uniquement sur `127.0.0.1` ; les connexions publiques passent par NGINX.
 
 Valider la copie complétée, puis installer le service :
 

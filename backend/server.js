@@ -222,7 +222,7 @@ app.use((error, _req, res, _next) => {
 });
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  app.listen(PORT, () => {
+  app.listen(PORT, '127.0.0.1', () => {
     console.log(`Serveur de conversion démarré sur le port ${PORT}`);
   });
 }

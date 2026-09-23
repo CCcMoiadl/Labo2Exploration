@@ -1,10 +1,20 @@
 # Production Azure
 
+État de conformité et preuves : [CONFORMITE.md](CONFORMITE.md).
+Les caractéristiques ci-dessous décrivent l'installation documentée ; les
+contrôles publics et les éléments restant à confirmer sont distingués dans l'audit.
+
 - Site : https://cegexplabo.xyz
-- VM Ubuntu 24.04 x86-64 : `64.236.212.75`, compte `azureuser`, SSH 22.
+- VM Ubuntu 24.04.4 LTS x86-64 : `64.236.212.75`, compte `azureuser`, SSH 22.
+- Taille Azure confirmée par IMDS : `Standard_B2ats_v2`.
+- Processeur : 2 vCPU, modèle présenté `AMD EPYC 7763 64-Core Processor`
+  (le nom du processeur hôte ne signifie pas que la VM possède 64 cœurs).
+- Mémoire visible par Linux : 892 Mio, sans swap lors de l'audit.
+- Disque OS : 30 Gio, stockage Azure `Premium_LRS` ; partition racine ext4
+  de 29 Gio, dont environ 25 Gio disponibles au 23 septembre 2026.
 - DNS Porkbun : enregistrement A à la racine vers `64.236.212.75`.
 - Application : `/opt/unitly`, frontend publié dans `/var/www/unitly`.
-- Backend : service `unitly-backend`, port 3000 ; Node.js 24 installé dans
+- Backend : service `unitly-backend`, écoute `127.0.0.1:3000` ; Node.js 24 installé dans
   `/opt/node-v24.21.0-linux-x64` et accessible via `/usr/local/bin/node`.
 - Nginx sert React et transmet `/api/` et `/health` au backend.
 - Certbot configure HTTPS et renouvelle le certificat avec `certbot.timer`.

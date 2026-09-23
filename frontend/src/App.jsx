@@ -8,6 +8,7 @@ import HistoryCard from './components/HistoryCard';
 import { createAppTheme } from './theme';
 import './App.css';
 import { requestConversion, validateConversion } from './conversion';
+import { messages } from './i18n';
 
 const API_BASE_URL = '/api';
 const DEFAULT_ACCENT_COLOR = '#6d4aff';
@@ -15,6 +16,9 @@ const defaultUnits = { length: ['ft', 'm'], volume: ['l', 'gal'], weight: ['kg',
 const isHexColor = (color) => /^#[0-9a-f]{6}$/i.test(color);
 
 export default function App() {
+  const [language, setLanguage] = useState(() => localStorage.getItem('language') === 'en' ? 'en' : 'fr');
+  const t = messages[language];
+  useEffect(() => { document.documentElement.lang = language; }, [language]);
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
@@ -53,20 +57,20 @@ export default function App() {
       try {
         setLoading(true);
         const response = await fetch(`${API_BASE_URL}/categories`);
-        if (!response.ok) throw new Error('Impossible de charger les catégories.');
+        if (!response.ok) throw new Error('categories');
         const data = await response.json();
         setCategories(data);
         setUnitsForCategory('length', data);
         setApiError(null);
       } catch {
-        setApiError('Le serveur est hors ligne ou inaccessible. Vérifiez que le backend Node.js est démarré.');
+        setApiError('offline');
       } finally { setLoading(false); }
     };
     fetchCategories();
   }, [setUnitsForCategory]);
 
   const performConversion = useCallback(async (inputValue, categoryId, from, to, signal) => {
-    const error = validateConversion(inputValue, categoryId, from, to, categories);
+    const error = validateConversion(inputValue, categoryId, from, to, categories, language);
     setResult(null); setFormula('');
     if (error) {
       setValidationError(error); setConverting(false); return;
@@ -75,7 +79,7 @@ export default function App() {
     setValidationError('');
     try {
       setConverting(true);
-      const data = await requestConversion({ category: categoryId, fromUnit: from, toUnit: to, value: numericValue }, signal);
+      const data = await requestConversion({ category: categoryId, fromUnit: from, toUnit: to, value: numericValue }, signal, language);
       if (signal.aborted) return;
       setResult(data.convertedValue); setFormula(data.formula);
       const units = categories[categoryId]?.units ?? [];
@@ -85,7 +89,7 @@ export default function App() {
         fromLabel: units.find((unit) => unit.id === from)?.label ?? from,
         toLabel: units.find((unit) => unit.id === to)?.label ?? to,
         originalValue: numericValue, convertedValue: data.convertedValue,
-        timestamp: new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        timestamp: new Date().toLocaleTimeString(language === 'en' ? 'en-US' : 'fr-CA', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       };
       setHistory((previous) => {
         const updated = [historyItem, ...previous.slice(0, 19)];
@@ -95,9 +99,9 @@ export default function App() {
     } catch (error) {
       if (signal.aborted) return;
       setResult(null); setFormula('');
-      setValidationError(error.message || 'Erreur de connexion au serveur.');
+      setValidationError(error.message || t.connection);
     } finally { if (!signal.aborted) setConverting(false); }
-  }, [categories]);
+  }, [categories, language]);
 
   useEffect(() => {
     if (loading || apiError || !fromUnit || !toUnit) return undefined;
@@ -109,6 +113,11 @@ export default function App() {
   const handleThemeToggle = () => setDarkMode((current) => {
     localStorage.setItem('darkMode', String(!current)); return !current;
   });
+  const handleLanguageChange = (nextLanguage) => {
+    setLanguage(nextLanguage);
+    localStorage.setItem('language', nextLanguage);
+    document.documentElement.lang = nextLanguage;
+  };
   const handleAccentChange = (color) => {
     if (!isHexColor(color)) return;
     setAccentColor(color);
@@ -134,17 +143,17 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box className="app-shell" style={{ '--theme-color': accentColor }}>
-        <AppHeader darkMode={darkMode} accentColor={accentColor} onThemeToggle={handleThemeToggle} onAccentChange={handleAccentChange} onAccentReset={handleAccentReset} />
+        <AppHeader darkMode={darkMode} accentColor={accentColor} language={language} onLanguageChange={handleLanguageChange} onThemeToggle={handleThemeToggle} onAccentChange={handleAccentChange} onAccentReset={handleAccentReset} />
         <Container component="main" maxWidth="lg">
-          <Hero />
-          {loading ? <Box className="loading-state"><CircularProgress /><Typography color="text.secondary">Préparation du convertisseur…</Typography></Box>
-            : apiError ? <Alert severity="error" className="connection-alert" action={<Button color="inherit" size="small" startIcon={<RefreshRoundedIcon />} onClick={() => window.location.reload()}>Réessayer</Button>}>{apiError}</Alert>
+          <Hero language={language} />
+          {loading ? <Box className="loading-state"><CircularProgress /><Typography color="text.secondary">{t.preparing}</Typography></Box>
+            : apiError ? <Alert severity="error" className="connection-alert" action={<Button color="inherit" size="small" startIcon={<RefreshRoundedIcon />} onClick={() => window.location.reload()}>{t.retry}</Button>}>{apiError === 'offline' ? t.offline : t.loadCategories}</Alert>
               : <Box className="content-grid">
-                <ConverterCard categories={categories} category={category} value={value} fromUnit={fromUnit} toUnit={toUnit} result={result} formula={formula} converting={converting} validationError={validationError} onCategoryChange={handleCategoryChange} onValueChange={setValue} onFromChange={setFromUnit} onToChange={setToUnit} onSwap={handleSwap} />
-                <HistoryCard history={history} onClear={handleClear} onRestore={handleRestore} />
+                <ConverterCard categories={categories} category={category} value={value} fromUnit={fromUnit} toUnit={toUnit} result={result} formula={formula} converting={converting} validationError={validationError} language={language} onCategoryChange={handleCategoryChange} onValueChange={setValue} onFromChange={setFromUnit} onToChange={setToUnit} onSwap={handleSwap} />
+                <HistoryCard history={history} onClear={handleClear} onRestore={handleRestore} language={language} />
               </Box>}
         </Container>
-        <Typography component="footer" variant="body2" color="text.secondary" align="center" sx={{ py: 5 }}>Unitly · Des conversions simples et précises</Typography>
+        <Typography component="footer" variant="body2" color="text.secondary" align="center" sx={{ py: 5 }}>{t.footer}</Typography>
       </Box>
     </ThemeProvider>
   );

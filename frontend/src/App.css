@@ -4,6 +4,7 @@
 .background-light { position: absolute; top: 0; left: 0; border-radius: 50%; filter: blur(8px); }
 .background-light-primary { width: min(38rem, 100vw); height: min(38rem, 100vw); background: radial-gradient(circle, color-mix(in srgb, var(--theme-color), transparent 66%), transparent 68%); }
 .background-light-secondary { width: min(30rem, 90vw); height: min(30rem, 90vw); background: radial-gradient(circle, color-mix(in srgb, var(--theme-color), transparent 78%), transparent 68%); }
+.background-spark { position: absolute; top: 0; left: 0; width: 42px; height: 42px; border-radius: 50%; opacity: 0; background: radial-gradient(circle, color-mix(in srgb, var(--theme-color), white 65%) 0%, color-mix(in srgb, var(--theme-color), white 25%) 8%, color-mix(in srgb, var(--theme-color), transparent 45%) 22%, transparent 70%); }
 .brand-mark { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; color: white; background: linear-gradient(135deg, var(--theme-color), color-mix(in srgb, var(--theme-color), white 25%)); box-shadow: 0 10px 28px color-mix(in srgb, var(--theme-color), transparent 70%); }
 .hero { min-height: 390px; display: grid; grid-template-columns: minmax(0,1.35fr) minmax(250px,.65fr); align-items: center; gap: 2rem; padding: 4.5rem 0 3rem; }
 .hero-copy { position: relative; z-index: 1; }

@@ -1,14 +1,32 @@
 # Node dependencies
 node_modules/
+.deploy.lock
 
-# Frontend builds
-frontend/dist/
-frontend/.vite/
+# Generated builds and test output
+dist/
+build/
+.vite/
+coverage/
 
 # Local env files
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+
+# Private keys and certificates
+*.key
+*.pem
+*.crt
+*.cer
+*.p12
+*.pfx
+*.p7b
+*.csr
+*.der
+id_rsa*
+id_ed25519*
+id_ecdsa*
+id_dsa*
 
 # IDE and OS files
 .vscode/

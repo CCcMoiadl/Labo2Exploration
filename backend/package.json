@@ -5,6 +5,8 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
+    "check": "node --check server.js",
+    "test": "node --test",
     "start": "node server.js",
     "dev": "node --watch server.js"
   },

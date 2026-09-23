@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Container, CssBaseline, ThemeProvider, Typography, useMediaQuery } from '@mui/material';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import AppHeader from './components/AppHeader';
+import BackgroundLights from './components/BackgroundLights';
 import Hero from './components/Hero';
 import ConverterCard from './components/ConverterCard';
 import HistoryCard from './components/HistoryCard';
@@ -143,6 +144,7 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box className="app-shell" style={{ '--theme-color': accentColor }}>
+        <BackgroundLights />
         <AppHeader darkMode={darkMode} accentColor={accentColor} language={language} onLanguageChange={handleLanguageChange} onThemeToggle={handleThemeToggle} onAccentChange={handleAccentChange} onAccentReset={handleAccentReset} />
         <Container component="main" maxWidth="lg">
           <Hero language={language} />

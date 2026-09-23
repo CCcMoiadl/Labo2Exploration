@@ -1,0 +1,23 @@
+# Remplacer les trois paramètres avant installation sur la VM.
+# APP_DIR est le chemin absolu de la racine du dépôt.
+[Unit]
+Description=Unitly - API de conversion
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=<DEPLOY_USER>
+WorkingDirectory=<APP_DIR>/backend
+Environment=NODE_ENV=production
+Environment=PORT=<BACKEND_PORT>
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=unitly-backend
+
+[Install]
+WantedBy=multi-user.target

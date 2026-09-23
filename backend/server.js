@@ -1,11 +1,34 @@
 import express from 'express';
 import cors from 'cors';
+import { pathToFileURL } from 'node:url';
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+export const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Ne journaliser que des métadonnées : aucune URL brute ni donnée utilisateur.
+app.use((req, res, next) => {
+  const started = process.hrtime.bigint();
+  res.once('finish', () => {
+    console.log(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info',
+      event: 'http_request',
+      method: req.method,
+      route: req.route?.path ?? 'unmatched',
+      statusCode: res.statusCode,
+      durationMs: Number((Number(process.hrtime.bigint() - started) / 1e6).toFixed(3)),
+    }));
+  });
+  next();
+});
 
 app.use(cors());
 app.use(express.json());
+
+app.get('/health', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Structure des données des catégories et unités (en français pour l'utilisateur, avec labels clairs)
 const unitData = {
@@ -113,27 +136,36 @@ app.get('/api/categories', (req, res) => {
 
 // Convert value
 app.post('/api/convert', (req, res) => {
+  if (!req.is('application/json')) {
+    return res.status(415).json({ error: "Le corps de la requête doit être au format JSON." });
+  }
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: "Un objet JSON est attendu." });
+  }
   const { category, fromUnit, toUnit, value } = req.body;
 
-  if (value === undefined || isNaN(value)) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     return res.status(400).json({ error: "La valeur à convertir doit être un nombre valide." });
   }
 
   const numValue = Number(value);
 
-  if (!category || !unitData[category]) {
+  if (typeof category !== 'string' || !Object.hasOwn(unitData, category)) {
     return res.status(400).json({ error: "Catégorie invalide ou manquante." });
   }
 
   const catInfo = unitData[category];
 
-  if (!fromUnit || !catInfo.units[fromUnit] || !toUnit || !catInfo.units[toUnit]) {
+  if (typeof fromUnit !== 'string' || !Object.hasOwn(catInfo.units, fromUnit) || typeof toUnit !== 'string' || !Object.hasOwn(catInfo.units, toUnit)) {
     return res.status(400).json({ error: "Unités de départ ou d'arrivée invalides." });
   }
 
   // Ne pas autoriser les valeurs négatives pour tout sauf la température
   if (category !== 'temperature' && numValue < 0) {
     return res.status(400).json({ error: "La valeur ne peut pas être négative pour cette catégorie." });
+  }
+  if (category === 'temperature' && numValue < { C: -273.15, F: -459.67, K: 0 }[fromUnit]) {
+    return res.status(400).json({ error: "La température ne peut pas être inférieure au zéro absolu." });
   }
 
   try {
@@ -157,7 +189,10 @@ app.post('/api/convert', (req, res) => {
     }
 
     // Arrondir le résultat à 6 décimales pour éviter les problèmes de virgule flottante
-    const roundedResult = Math.round(result * 1000000) / 1000000;
+    if (!Number.isFinite(result)) {
+      return res.status(400).json({ error: "La valeur est trop grande pour cette conversion." });
+    }
+    const roundedResult = Number(result.toFixed(6));
 
     res.json({
       category,
@@ -168,11 +203,26 @@ app.post('/api/convert', (req, res) => {
       formula
     });
   } catch (error) {
-    res.status(500).json({ error: error.message || "Une erreur est survenue lors de la conversion." });
+    res.status(500).json({ error: "Une erreur est survenue lors de la conversion." });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Serveur de conversion démarré sur le port ${PORT}`);
+app.use((_req, res) => {
+  res.status(404).json({ error: "Route introuvable." });
 });
-// Serveur de conversion prêt et optimisé
+
+app.use((error, _req, res, _next) => {
+  if (error.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: "Le corps de la requête contient un JSON invalide." });
+  }
+  if (error.type === 'entity.too.large') {
+    return res.status(413).json({ error: "Le corps de la requête est trop volumineux." });
+  }
+  res.status(500).json({ error: "Une erreur interne est survenue. Veuillez réessayer." });
+});
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  app.listen(PORT, () => {
+    console.log(`Serveur de conversion démarré sur le port ${PORT}`);
+  });
+}

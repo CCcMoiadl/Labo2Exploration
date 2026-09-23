@@ -7,8 +7,9 @@ import ConverterCard from './components/ConverterCard';
 import HistoryCard from './components/HistoryCard';
 import { createAppTheme } from './theme';
 import './App.css';
+import { requestConversion, validateConversion } from './conversion';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = '/api';
 const DEFAULT_ACCENT_COLOR = '#6d4aff';
 const defaultUnits = { length: ['ft', 'm'], volume: ['l', 'gal'], weight: ['kg', 'lb'], temperature: ['C', 'F'] };
 const isHexColor = (color) => /^#[0-9a-f]{6}$/i.test(color);
@@ -64,24 +65,18 @@ export default function App() {
     fetchCategories();
   }, [setUnitsForCategory]);
 
-  const performConversion = useCallback(async (inputValue, categoryId, from, to) => {
-    if (inputValue === '' || Number.isNaN(Number(inputValue))) {
-      setResult(null); setFormula(''); setValidationError(''); return;
+  const performConversion = useCallback(async (inputValue, categoryId, from, to, signal) => {
+    const error = validateConversion(inputValue, categoryId, from, to, categories);
+    setResult(null); setFormula('');
+    if (error) {
+      setValidationError(error); setConverting(false); return;
     }
     const numericValue = Number(inputValue);
-    if (categoryId !== 'temperature' && numericValue < 0) {
-      setValidationError('Les valeurs négatives ne sont pas autorisées pour cette catégorie.');
-      setResult(null); setFormula(''); return;
-    }
     setValidationError('');
     try {
       setConverting(true);
-      const response = await fetch(`${API_BASE_URL}/convert`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category: categoryId, fromUnit: from, toUnit: to, value: numericValue }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Erreur lors de la conversion.');
+      const data = await requestConversion({ category: categoryId, fromUnit: from, toUnit: to, value: numericValue }, signal);
+      if (signal.aborted) return;
       setResult(data.convertedValue); setFormula(data.formula);
       const units = categories[categoryId]?.units ?? [];
       const historyItem = {
@@ -98,14 +93,17 @@ export default function App() {
         return updated;
       });
     } catch (error) {
+      if (signal.aborted) return;
+      setResult(null); setFormula('');
       setValidationError(error.message || 'Erreur de connexion au serveur.');
-    } finally { setConverting(false); }
+    } finally { if (!signal.aborted) setConverting(false); }
   }, [categories]);
 
   useEffect(() => {
     if (loading || apiError || !fromUnit || !toUnit) return undefined;
-    const timer = setTimeout(() => performConversion(value, category, fromUnit, toUnit), 300);
-    return () => clearTimeout(timer);
+    const controller = new AbortController();
+    const timer = setTimeout(() => performConversion(value, category, fromUnit, toUnit, controller.signal), 300);
+    return () => { clearTimeout(timer); controller.abort(); };
   }, [value, category, fromUnit, toUnit, loading, apiError, performConversion]);
 
   const handleThemeToggle = () => setDarkMode((current) => {

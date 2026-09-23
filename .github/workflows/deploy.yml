@@ -1,0 +1,122 @@
+name: Déploiement production
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Ne pas interrompre un transfert ou un redémarrage en cours.
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Vérifier, compiler et déployer
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Installer Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Installer et tester le backend
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          npm ci --omit=dev
+          npm run check
+          npm test
+
+      - name: Installer, tester et compiler le frontend
+        working-directory: frontend
+        run: |
+          set -euo pipefail
+          npm ci --include=dev
+          npm test
+          npm run lint
+          npm run build
+          test -s dist/index.html
+          test -d dist/assets
+
+      - name: Vérifier le script de déploiement
+        run: bash -n deploy.sh
+
+      - name: Transférer et déployer sur la VM
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          APP_DIR: ${{ vars.APP_DIR }}
+          BACKEND_PORT: ${{ vars.BACKEND_PORT || '3000' }}
+          WEB_ROOT: ${{ vars.WEB_ROOT || '/var/www/unitly' }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          for name in DEPLOY_HOST DEPLOY_USER SSH_PRIVATE_KEY SSH_PORT SSH_KNOWN_HOSTS APP_DIR; do
+            [[ -n "${!name}" ]] || fail "Configuration manquante : $name"
+          done
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]] || fail 'Hôte SSH invalide (IPv4 ou nom DNS attendu).'
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ && "$DEPLOY_USER" != root ]] || fail 'Utilisateur SSH non root requis.'
+          [[ "$SSH_PORT" =~ ^[1-9][0-9]{0,4}$ ]] || fail 'Port SSH invalide.'
+          (( SSH_PORT <= 65535 )) || fail 'Port SSH hors limites.'
+          [[ "$BACKEND_PORT" =~ ^[1-9][0-9]{3,4}$ ]] || fail 'Port backend invalide.'
+          (( BACKEND_PORT >= 1024 && BACKEND_PORT <= 65535 )) || fail 'Port backend hors limites.'
+          for path in "$APP_DIR" "$WEB_ROOT"; do
+            [[ "$path" =~ ^/[a-zA-Z0-9_/-]+$ && "$path" != / ]] || fail 'Chemin absolu requis, sans espaces ni caractères spéciaux.'
+          done
+
+          command -v rsync >/dev/null
+          umask 077
+          ssh_dir=$(mktemp -d)
+          trap 'rm -f -- "$ssh_dir/key" "$ssh_dir/known_hosts"; rmdir -- "$ssh_dir"' EXIT
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$ssh_dir/key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$ssh_dir/known_hosts"
+          unset SSH_PRIVATE_KEY SSH_KNOWN_HOSTS
+          ssh_options=(-i "$ssh_dir/key" -p "$SSH_PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$ssh_dir/known_hosts" -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3)
+          target="$DEPLOY_USER@$DEPLOY_HOST"
+          echo 'Vérification des dossiers et de rsync sur la VM…'
+          ssh "${ssh_options[@]}" "$target" "test -d '$APP_DIR' && test -w '$APP_DIR' && test -d '$WEB_ROOT' && test -w '$WEB_ROOT' && command -v rsync >/dev/null"
+
+          echo 'Transfert des sources, tests, lockfiles, build et script…'
+          printf -v rsync_ssh '%q ' ssh "${ssh_options[@]}"
+          rsync -rz --delay-updates --safe-links --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r \
+            -e "$rsync_ssh" \
+            --exclude='.git/' --exclude='node_modules/' \
+            --exclude='.env' --exclude='.env.*' --exclude='.ssh/' \
+            --exclude='*.key' --exclude='*.pem' --exclude='*.crt' --exclude='*.cer' \
+            --exclude='*.p12' --exclude='*.pfx' --exclude='*.p7b' --exclude='*.csr' --exclude='*.der' \
+            --exclude='id_rsa*' --exclude='id_ed25519*' --exclude='id_ecdsa*' --exclude='id_dsa*' \
+            --exclude='*.log' --exclude='.deploy.lock' \
+            backend frontend deploy.sh "$target:$APP_DIR/"
+
+          echo 'Exécution de deploy.sh et contrôle de santé sur la VM…'
+          ssh "${ssh_options[@]}" "$target" "APP_DIR='$APP_DIR' BACKEND_PORT='$BACKEND_PORT' WEB_ROOT='$WEB_ROOT' bash '$APP_DIR/deploy.sh'"
+          echo 'Déploiement et contrôle de santé réussis.'
+
+      - name: Résultat du déploiement
+        if: always()
+        env:
+          RESULT: ${{ job.status }}
+        run: |
+          printf 'Résultat du workflow de production : %s\n' "$RESULT" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$RESULT" != success ]]; then
+            echo '::error::Le workflow a échoué ou a été annulé. Consulter la première étape en erreur.'
+          fi

@@ -3,6 +3,7 @@ name: Déploiement production
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,9 +15,13 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
     name: Vérifier, compiler et déployer
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment:
+      name: production
+      url: https://cegexplabo.xyz
     defaults:
       run:
         shell: bash
@@ -110,6 +115,11 @@ jobs:
           echo 'Exécution de deploy.sh et contrôle de santé sur la VM…'
           ssh "${ssh_options[@]}" "$target" "APP_DIR='$APP_DIR' BACKEND_PORT='$BACKEND_PORT' WEB_ROOT='$WEB_ROOT' bash '$APP_DIR/deploy.sh'"
           echo 'Déploiement et contrôle de santé réussis.'
+
+      - name: Vérifier le site HTTPS public
+        run: |
+          curl --fail --silent --show-error --retry 6 --retry-delay 10 --retry-all-errors --max-time 15 https://cegexplabo.xyz/health
+          curl --fail --silent --show-error --max-time 15 https://cegexplabo.xyz/ > /dev/null
 
       - name: Résultat du déploiement
         if: always()

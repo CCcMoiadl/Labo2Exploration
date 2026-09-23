@@ -101,7 +101,7 @@ export default function App() {
       setResult(null); setFormula('');
       setValidationError(error.message || t.connection);
     } finally { if (!signal.aborted) setConverting(false); }
-  }, [categories, language]);
+  }, [categories, language, t.connection]);
 
   useEffect(() => {
     if (loading || apiError || !fromUnit || !toUnit) return undefined;

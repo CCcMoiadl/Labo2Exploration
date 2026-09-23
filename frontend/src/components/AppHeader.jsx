@@ -43,7 +43,7 @@ export default function AppHeader({ darkMode, accentColor, language, onLanguageC
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Select size="small" value={language} onChange={(event) => onLanguageChange(event.target.value)} aria-label={t.language} sx={{ minWidth: 112, bgcolor: 'background.paper' }}>
-              <MenuItem value="fr">🇫🇷 Français</MenuItem><MenuItem value="en">🇬🇧 English</MenuItem>
+              <MenuItem value="fr"><Box component="span" aria-hidden="true" sx={{ mr: 1 }}>🇫🇷</Box> Français</MenuItem><MenuItem value="en"><Box component="span" aria-hidden="true" sx={{ mr: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 16, border: '1px solid', borderColor: 'divider', borderRadius: '2px', fontSize: '0.65rem', fontWeight: 800, lineHeight: 1 }}>EN</Box> English</MenuItem>
             </Select>
             <Tooltip title={t.themeTooltip}>
               <IconButton onClick={(event) => setColorAnchor(event.currentTarget)} aria-label={t.themeAria} aria-haspopup="dialog" aria-expanded={pickerOpen} sx={{ border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', color: 'primary.main' }}>
